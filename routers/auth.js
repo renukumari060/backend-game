@@ -7,23 +7,22 @@ const { SALT_ROUNDS } = require("../config/constants");
 
 const router = new Router();
 
-
-//login 
+//login
 router.post("/login", async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { name, password } = req.body;
 
-    if (!email || !password) {
+    if (!name || !password) {
       return res
         .status(400)
-        .send({ message: "Please provide both email and password" });
+        .send({ message: "Please provide both name and password" });
     }
 
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { name } });
 
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(400).send({
-        message: "User with that email not found or password incorrect",
+        message: "User with that name not found or password incorrect",
       });
     }
 
@@ -36,17 +35,15 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-
 //signup
 router.post("/signup", async (req, res) => {
-  const { email, password, name } = req.body;
-  if (!email || !password || !name) {
-    return res.status(400).send("Please provide an email, password and a name");
+  const { password, name } = req.body;
+  if (!password || !name) {
+    return res.status(400).send("Please provide password and a name");
   }
 
   try {
     const newUser = await User.create({
-      email,
       password: bcrypt.hashSync(password, SALT_ROUNDS),
       name,
     });
@@ -74,6 +71,36 @@ router.get("/me", authMiddleware, async (req, res) => {
   // don't send back the password hash
   delete req.user.dataValues["password"];
   res.status(200).send({ ...req.user.dataValues });
+});
+//http PATCH :4000/auth/1 checkPoint=3 highScore=20
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { checkPoint, highScore } = req.body;
+    const scoreToUpdate = await User.findByPk(id);
+
+    if (!scoreToUpdate) {
+      res.status(404).send("User not found");
+    }
+    const updated = await scoreToUpdate.update({ checkPoint, highScore });
+    res.send(updated);
+  } catch (e) {
+    console.log(e.message);
+    next(e);
+  }
+});
+
+//http DELETE :4000/auth/1
+router.delete("/:id", authMiddleware, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userToDelete = await User.findByPk(id);
+    await userToDelete.destroy();
+    res.send("User teminated");
+  } catch (e) {
+    console.log(e.message);
+    next(e);
+  }
 });
 
 module.exports = router;
