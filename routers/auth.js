@@ -72,8 +72,11 @@ router.get("/me", authMiddleware, async (req, res) => {
   delete req.user.dataValues["password"];
   res.status(200).send({ ...req.user.dataValues });
 });
+
 //http PATCH :4000/auth/1 checkPoint=3 highScore=20
-router.patch("/:id", async (req, res, next) => {
+router.patch("/:id", authMiddleware, async (req, res, next) => {
+  if (req.body.user.id != req.params.id) return;
+
   try {
     const { id } = req.params;
     const { checkPoint, highScore } = req.body;
@@ -82,7 +85,10 @@ router.patch("/:id", async (req, res, next) => {
     if (!scoreToUpdate) {
       res.status(404).send("User not found");
     }
-    const updated = await scoreToUpdate.update({ checkPoint, highScore });
+    const updated = await scoreToUpdate.update({
+      checkPoint: scoreToUpdate.checkPoint + checkPoint,
+      highScore: scoreToUpdate.highScore + highScore,
+    });
     res.send(updated);
   } catch (e) {
     console.log(e.message);
